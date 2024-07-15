@@ -14,7 +14,9 @@ class PasswordManager:
         self.c.execute('''CREATE TABLE IF NOT EXISTS users (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             username TEXT UNIQUE,
-                            password TEXT
+                            password TEXT,
+                            name TEXT,
+                            contact TEXT
                         )''')
         # Create passwords table
         self.c.execute('''CREATE TABLE IF NOT EXISTS passwords (
@@ -45,11 +47,12 @@ class PasswordManager:
         f = Fernet(key)
         return f.decrypt(password.encode()).decode()
 
-    def register_user(self, username, password):
-        """Registers a new user with a hashed password."""
+    def register_user(self, username, password, name, contact):
+        """Registers a new user with a hashed password, name, and contact."""
         hashed_password = self.hash_password(password)
         try:
-            self.c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, hashed_password))
+            self.c.execute('INSERT INTO users (username, password, name, contact) VALUES (?, ?, ?, ?)',
+                           (username, hashed_password, name, contact))
             self.conn.commit()
             return True
         except sqlite3.IntegrityError:
@@ -57,8 +60,11 @@ class PasswordManager:
 
     def login_user(self, username, password):
         """Logs in a user by checking the hashed password."""
-        hashed_password = self.hash_password(password)
-        self.c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, hashed_password))
+        if password is not None:
+            hashed_password = self.hash_password(password)
+            self.c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, hashed_password))
+        else:
+            self.c.execute('SELECT * FROM users WHERE username = ?', (username,))
         return self.c.fetchone()
 
     def add_password(self, user_id, site, password):

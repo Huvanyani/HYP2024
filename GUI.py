@@ -15,34 +15,88 @@ class GUI:
         self.setup_ui()
 
     def setup_ui(self):
-        """Initializes the main window and displays the login screen."""
+        """Initializes the main window and displays the welcome screen."""
         self.root.title("Password Manager")
-        self.__sizeof__()
-        self.show_login_screen()
+        self.show_welcome_screen()
+
+    def show_welcome_screen(self):
+        """Displays the welcome screen with Register and Login options."""
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        tk.Button(self.root, text="Register", command=self.show_register_screen).grid(row=0, column=0, padx=10, pady=10)
+        tk.Button(self.root, text="Login", command=self.show_login_screen).grid(row=1, column=0, padx=10, pady=10)
+
+    def show_register_screen(self):
+        """Displays the register screen."""
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        tk.Label(self.root, text="Registration", font=('Arial', 14)).grid(row=0, column=0, columnspan=2, pady=10)
+
+        tk.Label(self.root, text="Name:").grid(row=1, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Username:").grid(row=2, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Password:").grid(row=3, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Contact:").grid(row=4, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Confirm Contact:").grid(row=5, column=0, padx=10, pady=10)
+
+        self.name_entry = tk.Entry(self.root)
+        self.username_entry = tk.Entry(self.root)
+        self.password_entry = tk.Entry(self.root, show="*")
+        self.contact_entry = tk.Entry(self.root)
+        self.confirm_contact_entry = tk.Entry(self.root)
+
+        self.name_entry.grid(row=1, column=1, padx=10, pady=10)
+        self.username_entry.grid(row=2, column=1, padx=10, pady=10)
+        self.password_entry.grid(row=3, column=1, padx=10, pady=10)
+        self.contact_entry.grid(row=4, column=1, padx=10, pady=10)
+        self.confirm_contact_entry.grid(row=5, column=1, padx=10, pady=10)
+
+        tk.Button(self.root, text="Enroll Face", command=self.enroll_face).grid(row=6, column=0, padx=10, pady=10)
+        tk.Button(self.root, text="Register", command=self.register).grid(row=6, column=1, padx=10, pady=10)
+        tk.Button(self.root, text="Back", command=self.show_welcome_screen).grid(row=6, column=2, padx=10, pady=10)
 
     def show_login_screen(self):
         """Displays the login screen."""
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        tk.Label(self.root, text="Username:").grid(row=0, column=0)
-        tk.Label(self.root, text="Password:").grid(row=1, column=0)
+        tk.Label(self.root, text="Login", font=('Arial', 14)).grid(row=0, column=0, columnspan=2, pady=10)
+
+        tk.Label(self.root, text="Username:").grid(row=1, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Password:").grid(row=2, column=0, padx=10, pady=10)
 
         self.username_entry = tk.Entry(self.root)
         self.password_entry = tk.Entry(self.root, show="*")
 
-        self.username_entry.grid(row=0, column=1)
-        self.password_entry.grid(row=1, column=1)
+        self.username_entry.grid(row=1, column=1, padx=10, pady=10)
+        self.password_entry.grid(row=2, column=1, padx=10, pady=10)
 
-        tk.Button(self.root, text="Register", command=self.register).grid(row=2, column=0)
-        tk.Button(self.root, text="Login", command=self.login).grid(row=2, column=1)
-        tk.Button(self.root, text="Face", command=self.verification.verify_face).grid(row=2, column=2)
+        tk.Button(self.root, text="Login", command=self.login).grid(row=3, column=0, padx=10, pady=10)
+        tk.Button(self.root, text="Verify Face", command=self.verify_face).grid(row=3, column=1, padx=10, pady=10)
+        tk.Button(self.root, text="Request OTP", command=self.request_otp).grid(row=4, column=0, columnspan=2, padx=10,
+                                                                                pady=10)
+        tk.Button(self.root, text="Back", command=self.show_welcome_screen).grid(row=5, column=0, columnspan=2, padx=10,
+                                                                                 pady=10)
+
+    def enroll_face(self):
+        """Enrolls the user's face."""
+        username = self.username_entry.get()
+        self.enroll.capture_face(username)
 
     def register(self):
         """Registers a new user."""
+        name = self.name_entry.get()
         username = self.username_entry.get()
         password = self.password_entry.get()
-        if self.password_manager.register_user(username, password):
+        contact = self.contact_entry.get()
+        confirm_contact = self.confirm_contact_entry.get()
+
+        if contact != confirm_contact:
+            messagebox.showerror('Error', 'Contact fields do not match.')
+            return
+
+        if self.password_manager.register_user(username, password, name, contact):
             messagebox.showinfo('Success', 'Registration successful!')
         else:
             messagebox.showerror('Error', 'Username already exists')
@@ -59,36 +113,61 @@ class GUI:
         else:
             messagebox.showerror('Error', 'Invalid credentials')
 
+    def verify_face(self):
+        """Verifies the user's face."""
+        username = self.username_entry.get()
+        if self.verification.verify_face(username):
+            user = self.password_manager.login_user(username, None)  # Adjust this part as needed
+            if user:
+                self.current_user_id = user[0]
+                messagebox.showinfo('Success', 'Face verification successful!')
+                self.show_dashboard()
+            else:
+                messagebox.showerror('Error', 'Face verification failed. No matching user found.')
+        else:
+            messagebox.showerror('Error', 'Face verification failed.')
+
+    def request_otp(self):
+        """Requests an OTP for login (dummy function for now)."""
+        messagebox.showinfo('Info', 'OTP requested (functionality to be implemented).')
+
     def show_dashboard(self):
         """Displays the main dashboard for the logged-in user."""
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        tk.Label(self.root, text="Site:").grid(row=0, column=0)
-        tk.Label(self.root, text="Password:").grid(row=1, column=0)
+        tk.Label(self.root, text="Site:").grid(row=0, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Password:").grid(row=1, column=0, padx=10, pady=10)
 
         self.site_entry = tk.Entry(self.root)
         self.password_entry = tk.Entry(self.root)
 
-        self.site_entry.grid(row=0, column=1)
-        self.password_entry.grid(row=1, column=1)
+        self.site_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.password_entry.grid(row=1, column=1, padx=10, pady=10)
 
-        tk.Button(self.root, text="Generate Password", command=self.generate_password).grid(row=2, column=0)
-        tk.Button(self.root, text="Add Password", command=self.add_password).grid(row=2, column=1)
-        tk.Button(self.root, text="Update Password", command=self.update_password).grid(row=2, column=2)
-        # tk.Button(self.root, text="Face", command=self.enroll.capture_face).grid(row=2, column=3)
+        tk.Button(self.root, text="Generate Password", command=self.generate_password).grid(row=2, column=0, padx=10,
+                                                                                            pady=10)
+        tk.Button(self.root, text="Add Password", command=self.add_password).grid(row=2, column=1, padx=10, pady=10)
+        tk.Button(self.root, text="Update Password", command=self.update_password).grid(row=2, column=2, padx=10,
+                                                                                        pady=10)
+        tk.Button(self.root, text="Logout", command=self.logout).grid(row=2, column=3, padx=10, pady=10)
 
         self.password_list = ttk.Treeview(self.root, columns=('ID', 'Site', 'Password', 'Copy'), show='headings')
         self.password_list.heading('ID', text='ID')
         self.password_list.heading('Site', text='Site')
         self.password_list.heading('Password', text='Password')
         self.password_list.heading('Copy', text='Action')
-        # self.password_list.column('ID', width=0, stretch=tk.NO)  # Hide the ID column
+        self.password_list.column('ID', width=0, stretch=tk.NO)  # Hide the ID column
         self.password_list.column('Copy', width=100)
-        self.password_list.grid(row=3, column=0, columnspan=4)
+        self.password_list.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
 
         self.password_list.bind('<Double-1>', self.on_copy_button_click)
         self.show_passwords()
+
+    def logout(self):
+        """Logs out the user and returns to the welcome screen."""
+        self.current_user_id = None
+        self.show_welcome_screen()
 
     def generate_password(self):
         """Generates a secure password and displays it."""
