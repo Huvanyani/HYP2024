@@ -5,23 +5,17 @@ import os
 
 class Verification:
     def __init__(self, storage_path='face_data'):
-        """
-        Initializes the Verification class.
-        Args:
-            storage_path (str): Directory path where face scores are stored.
-        """
+
+        # Initializes the Verification class.
+
         self.storage_path = storage_path
         # Load the pre-trained face detector from OpenCV
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
     def verify_face(self, username):
-        """
-        Captures face using the webcam for verification and compares with stored face score.
-        Args:
-            username (str): The username of the person to be verified.
-        Returns:
-            bool: True if verification is successful, False otherwise.
-        """
+
+        # Captures face using the webcam for verification and compares with stored face score.
+
         cap = cv2.VideoCapture(0)
         cv2.namedWindow('Verify - Press q to capture')
 

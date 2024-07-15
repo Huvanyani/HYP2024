@@ -5,11 +5,9 @@ import os
 
 class Enroll:
     def __init__(self, storage_path='face_data'):
-        """
-        Initializes the Enroll class.
-        Args:
-            storage_path (str): Directory path where face scores will be stored.
-        """
+
+        # Initializes the Enroll class.
+
         self.storage_path = storage_path
         if not os.path.exists(self.storage_path):
             os.makedirs(self.storage_path)
@@ -17,11 +15,9 @@ class Enroll:
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
     def capture_face(self, username):
-        """
-        Captures face using the webcam for enrollment and stores the face score.
-        Args:
-            username (str): The username of the person to be enrolled.
-        """
+
+        # Captures face using the webcam for enrollment and stores the face score.
+
         cap = cv2.VideoCapture(0)
         cv2.namedWindow('Enroll - Press q to capture')
 
