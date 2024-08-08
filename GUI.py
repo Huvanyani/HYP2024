@@ -24,8 +24,11 @@ class GUI:
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        tk.Button(self.root, text="Register", command=self.show_register_screen).grid(row=0, column=0, padx=10, pady=10)
-        tk.Button(self.root, text="Login", command=self.show_login_screen).grid(row=1, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Welcome", font=('Arial', 16)).grid(row=0, column=0, columnspan=2, pady=10)
+        tk.Button(self.root, text="Register", command=self.show_register_screen).grid(row=1, column=0, columnspan=2,
+                                                                                      padx=10, pady=10)
+        tk.Button(self.root, text="Login", command=self.show_login_screen).grid(row=2, column=0, columnspan=2, padx=10,
+                                                                                pady=10)
 
     def show_register_screen(self):
         """Displays the register screen."""
@@ -61,7 +64,7 @@ class GUI:
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        tk.Label(self.root, text="Login", font=('Arial', 14)).grid(row=0, column=0, columnspan=2, pady=10)
+        tk.Label(self.root, text="Login", font=('Arial', 14)).grid(row=0, column=0, columnspan=3, pady=10)
 
         tk.Label(self.root, text="Username:").grid(row=1, column=0, padx=10, pady=10)
         tk.Label(self.root, text="Password:").grid(row=2, column=0, padx=10, pady=10)
@@ -74,9 +77,8 @@ class GUI:
 
         tk.Button(self.root, text="Login", command=self.login).grid(row=3, column=0, padx=10, pady=10)
         tk.Button(self.root, text="Verify Face", command=self.verify_face).grid(row=3, column=1, padx=10, pady=10)
-        tk.Button(self.root, text="Request OTP", command=self.request_otp).grid(row=4, column=0, columnspan=2, padx=10,
-                                                                                pady=10)
-        tk.Button(self.root, text="Back", command=self.show_welcome_screen).grid(row=5, column=0, columnspan=2, padx=10,
+        tk.Button(self.root, text="Request OTP", command=self.request_otp).grid(row=3, column=2, padx=10, pady=10)
+        tk.Button(self.root, text="Back", command=self.show_welcome_screen).grid(row=4, column=0, columnspan=3, padx=10,
                                                                                  pady=10)
 
     def enroll_face(self):
@@ -225,3 +227,4 @@ class GUI:
         password_entry.grid(row=0, column=1)
         password_entry.insert(0, decrypted_password)
         tk.Button(popup, text="Close", command=popup.destroy).grid(row=1, column=0, columnspan=2)
+
