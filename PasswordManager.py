@@ -93,3 +93,10 @@ class PasswordManager:
         # Retrieves password and key for a specific password entry
         self.c.execute('SELECT password, key FROM passwords WHERE id = ?', (password_id,))
         return self.c.fetchone()
+
+    def get_username_by_id(self, user_id):
+        """Retrieves the username associated with the given user_id from the users table."""
+        self.c.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+        result = self.c.fetchone()
+        if result:
+            return result[0]  # Return the username if found
