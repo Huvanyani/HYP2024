@@ -29,7 +29,7 @@ class Enroll:
         cv2.namedWindow('Enroll - Press c to capture')
         blink_count = 0
         EAR_THRESHOLD = 0.25
-        CONSEC_FRAMES = 3
+        CONSEC_FRAMES = 2
         counter = 0
 
         while True:

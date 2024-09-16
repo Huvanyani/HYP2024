@@ -95,7 +95,7 @@ class PasswordManager:
         return self.c.fetchone()
 
     def get_username_by_id(self, user_id):
-        """Retrieves the username associated with the given user_id from the users table."""
+        # Retrieves the username associated with the given user id from the users table.
         self.c.execute("SELECT username FROM users WHERE id = ?", (user_id,))
         result = self.c.fetchone()
         if result:

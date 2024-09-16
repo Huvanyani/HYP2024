@@ -6,7 +6,8 @@ import dlib
 
 
 class Verification:
-    def __init__(self, storage_path='face_data', shape_predictor_path='face_data/shape_predictor_68_face_landmarks.dat'):
+    def __init__(self, storage_path='face_data',
+                 shape_predictor_path='face_data/shape_predictor_68_face_landmarks.dat'):
         # Initializing the verification class.
         self.storage_path = storage_path
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -21,13 +22,13 @@ class Verification:
         ear = (A + B) / (2.0 * C)  # eye aspect ratio
         return ear
 
-    def verify_face(self, username):
+    def verify_face(self, username, threshold=0.8):
         # Captures face using the webcam for verification and compares with stored face score.
         cap = cv2.VideoCapture(0)
         cv2.namedWindow('Verify - Press c to capture')
         blink_count = 0
-        EAR_THRESHOLD = 0.25
-        CONSEC_FRAMES = 3
+        EAR_THRESHOLD = 0.25  # threshold to detect blinks
+        CONSEC_FRAMES = 2  # number of frames to ensure the eye is closed
         counter = 0
 
         while True:
@@ -57,12 +58,12 @@ class Verification:
                         blink_count += 1
                     counter = 0
 
-                    # combining the landmarks into a single array along the axis
-                    for (x, y) in np.concatenate((left_eye, right_eye), axis=0):
-                        cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)  # drawing a dot on each detected landmark
+                # combining the landmarks into a single array along the axis
+                for (x, y) in np.concatenate((left_eye, right_eye), axis=0):
+                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)  # drawing a dot on each detected landmark
 
-                cv2.rectangle(frame, (rect.left(), rect.top()), (rect.right(), rect.bottom()), (0, 255, 0), 2)
-
+                cv2.rectangle(frame, (rect.left(), rect.top()), (rect.right(), rect.bottom()), (0, 255, 0),
+                              2)  # drawing a rectangle around detected face
 
             cv2.imshow('Verify - Press c to capture', frame)
             key = cv2.waitKey(1)
@@ -77,15 +78,19 @@ class Verification:
         face_scores = face_recognition.face_encodings(frame)
         if face_scores:
             face_score = face_scores[0]
-            stored_score_path = os.path.join(self.storage_path, f'{username}.npy')
+            stored_score_path = os.path.join(self.storage_path, f'{username}.npy')  # retrieving the stored face score
             if os.path.exists(stored_score_path):
-                stored_score = np.load(stored_score_path)
-                matches = face_recognition.compare_faces([stored_score], face_score)
-                if matches[0]:
-                    print(f"Face verification for {username} successful.")
+                stored_score = np.load(stored_score_path)  # loading the stored face encoding
+
+                # Comparing the stored face score with the captured face score using a threshold
+                face_distance = face_recognition.face_distance([stored_score], face_score)
+
+                if face_distance[0] <= threshold:
+                    print(f"Face verification for {username} successful")
                     return True
                 else:
-                    print(f"Face verification for {username} failed.")
+                    print(
+                        f"Face verification for {username} failed.")
                     return False
             else:
                 print(f"No stored score for {username}. Please enroll first.")
@@ -94,7 +99,6 @@ class Verification:
             print("No face detected. Please try again.")
             return False
 
-        # references:
-    """1. Soukupová, T., & Cech, J. (2016). Real-Time Eye Blink Detection using Facial Landmarks.
-    2. Pathak, A. (2018). GitHub Repository on Eye Blink Detection using EAR. 
-        https://github.com/pathak-ashutosh/Eye-blink-detection"""
+# references:
+# 1. Soukupová, T., & Cech, J. (2016). Real-Time Eye Blink Detection using Facial Landmarks.
+# 2. Pathak, A. (2018). GitHub Repository on Eye Blink Detection using EAR. https://github.com/pathak-ashutosh/Eye-blink-detection

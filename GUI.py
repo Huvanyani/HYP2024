@@ -124,9 +124,10 @@ class GUI:
             messagebox.showerror('Error', 'Invalid credentials')
 
     def verify_face(self):
-        # Functionality for verifying the user's face."""
+        # Functionality for verifying the user's face.
         username = self.username_entry.get()
-        if self.verification.verify_face(username):
+        threshold = 0.6
+        if self.verification.verify_face(username, threshold):
             user = self.password_manager.login_user(username, None)  #
             if user:
                 self.current_user_id = user[0]
