@@ -223,17 +223,13 @@ class GUI:
         self.copy_password(password_id)
 
     def copy_password(self, password_id):
-        """Decrypts the password and shows it in a popup after verifying the user's face."""
+        # Decrypts the password and shows it in a popup after verifying the user's face.
 
-        # Get the username based on the current user's ID
-        username = self.password_manager.get_username_by_id(self.current_user_id)
+        username = self.password_manager.get_username_by_id(self.current_user_id)   # Get the username based on the current user's ID
 
         if username:
-            # Create an instance of the Verification class
-            verifier = Verification()
-
-            # Perform face verification
-            face_verified = verifier.verify_face(username)
+            verifier = Verification()   # Creating an instance of the Verification class
+            face_verified = verifier.verify_face(username)  # Performing face verification
 
             if face_verified:
                 # If the face is verified, proceed to decrypt and show the password
@@ -255,7 +251,7 @@ class GUI:
                 password_entry.insert(0, decrypted_password)
                 tk.Button(popup, text="Close", command=popup.destroy).grid(row=1, column=0, columnspan=2)
             else:
-                # If face verification fails, display an error message
+                # displaying an error message for when face verification fails
                 messagebox.showerror('Error', 'Face verification failed. You are not authorized to copy this password.')
         else:
             messagebox.showerror('Error', 'User not found. Unable to retrieve username.')
