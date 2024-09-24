@@ -22,7 +22,7 @@ class Verification:
         ear = (A + B) / (2.0 * C)  # eye aspect ratio
         return ear
 
-    def verify_face(self, username, threshold=0.8):
+    def verify_face(self, username, threshold=0.5):
         # Captures face using the webcam for verification and compares with stored face score.
         cap = cv2.VideoCapture(0)
         cv2.namedWindow('Verify - Press c to capture')
