@@ -22,7 +22,7 @@ class Verification:
         ear = (A + B) / (2.0 * C)  # eye aspect ratio
         return ear
 
-    def verify_face(self, username, threshold=0.5):
+    def verify_face(self, username, threshold):
         # Captures face using the webcam for verification and compares with stored face score.
         cap = cv2.VideoCapture(0)
         cv2.namedWindow('Verify - Press c to capture')
@@ -85,12 +85,12 @@ class Verification:
                 # Comparing the stored face score with the captured face score using a threshold
                 face_distance = face_recognition.face_distance([stored_score], face_score)
 
-                if face_distance[0] <= threshold:
-                    print(f"Face verification for {username} successful")
+                if face_distance <= threshold:
+                    print(f"Face verification for {username} successful and the distance is ", face_distance )
                     return True
                 else:
                     print(
-                        f"Face verification for {username} failed.")
+                        f"Face verification for {username} failed. The threshold is ", face_distance)
                     return False
             else:
                 print(f"No stored score for {username}. Please enroll first.")

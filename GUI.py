@@ -136,7 +136,7 @@ class GUI:
     def verify_face(self):
         # Verifies the user's face before allowing access
         username = self.login_username_entry.get().strip()
-        threshold = 0.6  # Set the threshold for face verification
+        threshold = 0.4  # Set the threshold for face verification
         if self.verification.verify_face(username, threshold):
             user = self.password_manager.login_user(username, None)  # Assuming login_user can handle None password for face verification
             if user:
