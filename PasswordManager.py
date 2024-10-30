@@ -4,17 +4,17 @@ from cryptography.fernet import Fernet
 
 class PasswordManager:
     def __init__(self, db_name='password_manager.db'):
+        # Initialize the connection to the SQLite database
         self.conn = sqlite3.connect(db_name)
         self.c = self.conn.cursor()
         self.setup_database()
 
     def setup_database(self):
-        # Sets up the database with required tables.
+        # Sets up the database with required tables if they do not exist
         # Creating the users table
         self.c.execute('''CREATE TABLE IF NOT EXISTS users (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             username TEXT UNIQUE,
-                            password TEXT,
                             name TEXT,
                             contact TEXT
                         )''')
@@ -31,15 +31,15 @@ class PasswordManager:
         self.conn.commit()
 
     def hash_password(self, password):
-        # Hashes a password using SHA-256.
+        # Hashes a password using SHA-256
         return hashlib.sha256(password.encode()).hexdigest()
 
     def generate_key(self):
-        # Generates a new encryption key.
+        # Generates a new encryption key for securing the password
         return Fernet.generate_key()
 
     def encrypt_password(self, password, key):
-        # Encrypts a password using the provided key.
+        # Encrypts a password using the provided key
         f = Fernet(key)
         return f.encrypt(password.encode()).decode()
 
@@ -48,23 +48,25 @@ class PasswordManager:
         f = Fernet(key)
         return f.decrypt(password.encode()).decode()
 
-    def register_user(self, username, password, name, contact):
-        # Registers a new user with a hashed password, name, and contact.
-        hashed_password = self.hash_password(password)
+    def register_user(self, username, name, contact):
+        # Registers a new user with a hashed password, name, and contact details
+        #hashed_password = self.hash_password(password)
         try:
-            self.c.execute('INSERT INTO users (username, password, name, contact) VALUES (?, ?, ?, ?)',
-                           (username, hashed_password, name, contact))
+            self.c.execute('INSERT INTO users (username, name, contact) VALUES (?, ?, ?)',
+                           (username, name, contact))
             self.conn.commit()
             return True
         except sqlite3.IntegrityError:
+            # Username already exists
             return False
 
     def login_user(self, username, password):
-        # Logs in a user by checking the hashed password.
+        # Logs in a user by checking the hashed password
         if password is not None:
             hashed_password = self.hash_password(password)
             self.c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, hashed_password))
         else:
+            # If no password is provided (for face verification), we just check the username
             self.c.execute('SELECT * FROM users WHERE username = ?', (username,))
         return self.c.fetchone()
 
@@ -77,7 +79,7 @@ class PasswordManager:
         self.conn.commit()
 
     def update_password(self, user_id, site, password):
-        # Updates an existing password entry for the logged-in user.
+        # Updates an existing password entry for the logged-in user
         key = self.generate_key()
         encrypted_password = self.encrypt_password(password, key)
         self.c.execute('UPDATE passwords SET password = ?, key = ? WHERE user_id = ? AND site = ?',
@@ -85,18 +87,19 @@ class PasswordManager:
         self.conn.commit()
 
     def get_passwords(self, user_id):
-        # Retrieves all password entries for the logged-in user.
+        # Retrieves all password entries for the logged-in user
         self.c.execute('SELECT id, site, password, key FROM passwords WHERE user_id = ?', (user_id,))
         return self.c.fetchall()
 
     def get_password_details(self, password_id):
-        # Retrieves password and key for a specific password entry
+        # Retrieves the encrypted password and key for a specific password entry
         self.c.execute('SELECT password, key FROM passwords WHERE id = ?', (password_id,))
         return self.c.fetchone()
 
     def get_username_by_id(self, user_id):
-        # Retrieves the username associated with the given user id from the users table.
+        # Retrieves the username associated with the given user ID
         self.c.execute("SELECT username FROM users WHERE id = ?", (user_id,))
         result = self.c.fetchone()
         if result:
             return result[0]  # Return the username if found
+        return None

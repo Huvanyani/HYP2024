@@ -10,8 +10,8 @@ class GUI:
         self.root = root
         self.password_manager = password_manager
         self.current_user_id = None
-        self.enroll = Enroll()
-        self.verification = Verification()
+        self.enroll = Enroll()  # Initialize Enroll class for facial enrollment
+        self.verification = Verification()  # Initialize Verification class for facial recognition
         self.setup_ui()
 
     def setup_ui(self):
@@ -20,7 +20,7 @@ class GUI:
         self.show_welcome_screen()
 
     def show_welcome_screen(self):
-        # Displaying the welcome screen with Register and Login options.
+        # Displaying the welcome screen with Register and Login options
         for widget in self.root.winfo_children():
             widget.destroy()
         tk.Label(self.root, text="Welcome", font=('Arial', 16)).grid(row=0, column=0, columnspan=2, pady=10)
@@ -28,42 +28,42 @@ class GUI:
         tk.Button(self.root, text="Login", command=self.show_login_screen).grid(row=2, column=0, columnspan=2, padx=10, pady=10)
 
     def show_register_screen(self):
-        # Displays the register screen along with its components.
+        # Displays the register screen with components
         for widget in self.root.winfo_children():
             widget.destroy()
 
         tk.Label(self.root, text="Registration", font=('Arial', 14)).grid(row=0, column=0, columnspan=2, pady=10)
         tk.Label(self.root, text="Name:").grid(row=1, column=0, padx=10, pady=10)
         tk.Label(self.root, text="Username:").grid(row=2, column=0, padx=10, pady=10)
-        tk.Label(self.root, text="Password:").grid(row=3, column=0, padx=10, pady=10)
-        tk.Label(self.root, text="Contact:").grid(row=4, column=0, padx=10, pady=10)
-        tk.Label(self.root, text="Confirm Contact:").grid(row=5, column=0, padx=10, pady=10)
+        # tk.Label(self.root, text="Password:").grid(row=3, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Contact:").grid(row=3, column=0, padx=10, pady=10)
+        tk.Label(self.root, text="Confirm Contact:").grid(row=4, column=0, padx=10, pady=10)
 
-        # defining register textboxes
+        # Register textboxes
         self.name_entry = tk.Entry(self.root)
         self.username_entry = tk.Entry(self.root)
-        self.password_entry = tk.Entry(self.root, show="*")
+       # self.password_entry = tk.Entry(self.root, show="*")
         self.contact_entry = tk.Entry(self.root)
         self.confirm_contact_entry = tk.Entry(self.root)
 
-        # placing the textboxes on the UI
+        # Placing textboxes
         self.name_entry.grid(row=1, column=1, padx=10, pady=10)
         self.username_entry.grid(row=2, column=1, padx=10, pady=10)
-        self.password_entry.grid(row=3, column=1, padx=10, pady=10)
-        self.contact_entry.grid(row=4, column=1, padx=10, pady=10)
-        self.confirm_contact_entry.grid(row=5, column=1, padx=10, pady=10)
+        # self.password_entry.grid(row=3, column=1, padx=10, pady=10)
+        self.contact_entry.grid(row=3, column=1, padx=10, pady=10)
+        self.confirm_contact_entry.grid(row=4, column=1, padx=10, pady=10)
 
-        # Enrollment will now trigger registration automatically after face capture
+        # Enrollment will trigger registration after face capture
         tk.Button(self.root, text="Enroll & Register", command=self.enroll_face_and_register).grid(row=6, column=0, padx=10, pady=10)
         tk.Button(self.root, text="Back", command=self.show_welcome_screen).grid(row=6, column=1, padx=10, pady=10)
 
     def enroll_face_and_register(self):
-        # Validates the fields and enrolls face; registers user automatically after face enrollment.
+        # Validates the fields and enrolls face; registers user automatically after face enrollment
 
         # Get user details
         name = self.name_entry.get().strip()
         username = self.username_entry.get().strip()
-        password = self.password_entry.get().strip()
+        # password = self.password_entry.get().strip()
         contact = self.contact_entry.get().strip()
         confirm_contact = self.confirm_contact_entry.get().strip()
 
@@ -74,57 +74,55 @@ class GUI:
             return
 
         # Validate password using regex
-        password_regex = r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
-        if not re.match(password_regex, password):
-            messagebox.showerror('Error', 'Password must have at least 8 characters, 1 digit, 1 special character, and 1 alphabet.')
-            return
+       # password_regex = r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
+       # if not re.match(password_regex, password):
+         #   messagebox.showerror('Error', 'Password must have at least 8 characters, 1 digit, 1 special character, and 1 alphabet.')
+          #  return
 
         # Ensure contact numbers match
         if contact != confirm_contact:
             messagebox.showerror('Error', 'Contact fields do not match.')
             return
 
-        # Proceed with face capture and registration if validation passes
-        success = self.enroll.capture_face(username)
+        # Proceed with face capture and registration
+        success = self.enroll.enroll_face(username)
 
         if success:
-            # After capturing the face, proceed with registration
-            self.register_user(name, username, password, contact)
+            self.register_user(name, username, contact)
         else:
-            # If face capture failed, show error message
             messagebox.showerror('Error', 'Face enrollment failed. Please try again.')
 
-    def register_user(self, name, username, password, contact):
-        # Registers a new user and adds them to the database.
-        if self.password_manager.register_user(username, password, name, contact):
+    def register_user(self, name, username, contact):
+        # Registers a new user and adds them to the database
+        if self.password_manager.register_user(username, name, contact):
             messagebox.showinfo('Success', 'Registration successful!')
             self.show_login_screen()
         else:
             messagebox.showerror('Error', 'Username already exists.')
 
     def show_login_screen(self):
-        # Displaying the login screen with components.
+        # Displaying the login screen
         for widget in self.root.winfo_children():
             widget.destroy()
 
         tk.Label(self.root, text="Login", font=('Arial', 14)).grid(row=0, column=0, columnspan=3, pady=10)
         tk.Label(self.root, text="Username:").grid(row=1, column=0, padx=10, pady=10)
-        tk.Label(self.root, text="Password:").grid(row=2, column=0, padx=10, pady=10)
+        # tk.Label(self.root, text="Password:").grid(row=2, column=0, padx=10, pady=10)
 
         self.login_username_entry = tk.Entry(self.root)
-        self.login_password_entry = tk.Entry(self.root, show="*")
+       # self.login_password_entry = tk.Entry(self.root, show="*")
 
         self.login_username_entry.grid(row=1, column=1, padx=10, pady=10)
-        self.login_password_entry.grid(row=2, column=1, padx=10, pady=10)
+        # self.login_password_entry.grid(row=2, column=1, padx=10, pady=10)
 
-        tk.Button(self.root, text="Login", command=self.login).grid(row=3, column=0, padx=10, pady=10)
+       # tk.Button(self.root, text="Login", command=self.login).grid(row=3, column=0, padx=10, pady=10)
         tk.Button(self.root, text="Verify Face", command=self.verify_face).grid(row=3, column=1, padx=10, pady=10)
         tk.Button(self.root, text="Back", command=self.show_welcome_screen).grid(row=4, column=0, columnspan=3, padx=10, pady=10)
 
     def login(self):
         # Logs in a user based on username and password
         username = self.login_username_entry.get().strip()
-        password = self.login_password_entry.get().strip()
+        password = 123
         user = self.password_manager.login_user(username, password)
         if user:
             self.current_user_id = user[0]
@@ -136,7 +134,7 @@ class GUI:
     def verify_face(self):
         # Verifies the user's face before allowing access
         username = self.login_username_entry.get().strip()
-        threshold = 0.4  # Set the threshold for face verification
+        threshold = 0.2  # Set the threshold for face verification
         if self.verification.verify_face(username, threshold):
             user = self.password_manager.login_user(username, None)  # Assuming login_user can handle None password for face verification
             if user:
@@ -149,35 +147,30 @@ class GUI:
             messagebox.showerror('Error', 'Face verification failed.')
 
     def show_dashboard(self):
-        # Displays the main dashboard for the logged-in user.
+        # Displays the main dashboard for the logged-in user
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        # defining and placing labels on the dashboard UI
         tk.Label(self.root, text="Site:", font=('Arial', 12)).grid(row=0, column=0, padx=10, pady=10, sticky='e')
         tk.Label(self.root, text="Password:", font=('Arial', 12)).grid(row=1, column=0, padx=10, pady=10, sticky='e')
 
-        # defining textboxes for the dashboard
         self.site_entry = tk.Entry(self.root, width=30)
         self.password_entry = tk.Entry(self.root, width=30)
 
-        # placing the textboxes on the UI
         self.site_entry.grid(row=0, column=1, padx=10, pady=10)
         self.password_entry.grid(row=1, column=1, padx=10, pady=10)
 
-        # defining and placing buttons for dashboard actions
         tk.Button(self.root, text="Generate Password", command=self.generate_password).grid(row=2, column=0, padx=10, pady=10)
         tk.Button(self.root, text="Add Password", command=self.add_password).grid(row=2, column=1, padx=10, pady=10)
         tk.Button(self.root, text="Update Password", command=self.update_password).grid(row=2, column=2, padx=10, pady=10)
         tk.Button(self.root, text="Logout", command=self.logout).grid(row=2, column=3, padx=10, pady=10)
 
-        # creating a treeview to display the passwords and site names on
         self.password_list = ttk.Treeview(self.root, columns=('ID', 'Site', 'Password', 'Copy'), show='headings')
         self.password_list.heading('ID', text='ID')
         self.password_list.heading('Site', text='Site')
         self.password_list.heading('Password', text='Password')
         self.password_list.heading('Copy', text='Action')
-        self.password_list.column('ID', width=0, stretch=tk.NO)  # Hiding the ID column for better view
+        self.password_list.column('ID', width=0, stretch=tk.NO)  # Hide the ID column
         self.password_list.column('Copy', width=100)
         self.password_list.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
 
@@ -220,12 +213,10 @@ class GUI:
 
     def show_passwords(self):
         # Displays all password entries for the logged-in user.
-
-        # clearing the tree before showing new information
         for item in self.password_list.get_children():
             self.password_list.delete(item)
 
-        # getting the passwords for the current user
+        # Fetching the passwords for the current user
         passwords = self.password_manager.get_passwords(self.current_user_id)
         for i, (password_id, site, encrypted_password, key) in enumerate(passwords):
             self.password_list.insert('', 'end', values=(password_id, site, '******', 'Copy'))
@@ -238,13 +229,11 @@ class GUI:
 
     def copy_password(self, password_id):
         # Decrypts the password and shows it in a popup after verifying the user's face.
-
-        # Get the username based on the current user's ID
         username = self.password_manager.get_username_by_id(self.current_user_id)
 
         if username:
-            # Perform face verification with a threshold of 0.6
-            threshold = 0.6
+            # Perform face verification with a threshold of
+            threshold = 0.2
             face_verified = self.verification.verify_face(username, threshold)
 
             if face_verified:
@@ -268,10 +257,11 @@ class GUI:
                 password_entry.focus_set()
 
                 # Optionally, you can add a button to copy the password to the clipboard
-                tk.Button(popup, text="Copy to Clipboard", command=lambda: self.copy_to_clipboard(decrypted_password)).grid(row=1, column=0, padx=10, pady=10)
+                tk.Button(popup, text="Copy to Clipboard",
+                          command=lambda: self.copy_to_clipboard(decrypted_password)).grid(row=1, column=0, padx=10,
+                                                                                           pady=10)
                 tk.Button(popup, text="Close", command=popup.destroy).grid(row=1, column=1, padx=10, pady=10)
             else:
-                # displaying an error message for when face verification fails
                 messagebox.showerror('Error', 'Face verification failed. You are not authorized to copy this password.')
         else:
             messagebox.showerror('Error', 'User not found. Unable to retrieve username.')
@@ -280,5 +270,6 @@ class GUI:
         # Copies the given text to the clipboard.
         self.root.clipboard_clear()
         self.root.clipboard_append(text)
-        self.root.update()  # now it stays on the clipboard after the window is closed
+        self.root.update()  # Now it stays on the clipboard after the window is closed
         messagebox.showinfo('Copied', 'Password copied to clipboard!')
+

@@ -1,110 +1,160 @@
 import cv2
-import face_recognition
+import dlib
 import numpy as np
 import os
-import dlib
+from keras.models import load_model
 
 class Enroll:
-    def __init__(self, storage_path='face_data', shape_predictor_path='face_data/shape_predictor_68_face_landmarks.dat'):
-        # Initializing the enrollment class.
-        self.storage_path = storage_path
-        if not os.path.exists(self.storage_path):
-            os.makedirs(self.storage_path)
-        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        self.detector = dlib.get_frontal_face_detector()
+    def __init__(self, model_path="C:\\Users\Huvanyani\\OneDrive - University of Johannesburg\\School\\2024\\Password Manager\\cnn_model.h5", storage_path='face_data', shape_predictor_path='face_data/shape_predictor_68_face_landmarks.dat'):
+        # Load the trained CNN model
+        self.model = load_model(model_path)
+        self.storage_path = storage_path  # Directory where face encodings will be saved
+
+        self.detector = dlib.get_frontal_face_detector()  # Dlib face detector
         self.predictor = dlib.shape_predictor(shape_predictor_path)
 
+        if not os.path.exists(self.storage_path):
+            os.makedirs(self.storage_path)  # Create the storage directory if it doesn't exist
+
+        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+    def preprocess_face(self, face):
+        # Resizes and normalizes the face image for the FaceNet model input.
+
+        img_size = (50, 37)     # LFW image sizes
+        #   img_size = (160, 160)  # Update image size to match FaceNet input (160x160)
+
+        """
+        # If the face is in grayscale, convert it to RGB (FaceNet expects 3 channels)
+        if len(face.shape) == 2 or (
+                len(face.shape) == 3 and face.shape[2] == 1):  # If the image has 1 channel (grayscale)
+            face = cv2.cvtColor(face, cv2.COLOR_GRAY2RGB)  # Convert to RGB
+        """
+
+        if len(face.shape) == 3 and face.shape[2] == 3:  # If the image has 3 channels (RGB)
+            face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+
+        print(f"Original face size: {face.shape}")
+
+        # Resize the face to the required dimensions (160x160)
+        face = cv2.resize(face, img_size)
+
+        # Reshape for the model input, ensuring the size matches (160x160x3)
+        #   face = face.reshape(1, img_size[0], img_size[1], 3)  # Reshape for FaceNet (batch_size, height, width, channels)
+
+        face = face.reshape(img_size[0], img_size[1])
+        print(f"Resized face size: {face.shape}")
+
+        # Normalize the pixel values to [0, 1] range
+        face = face / 255.0
+
+        return face
+
+    def generate_face_encoding(self, face):
+        # Generates a face encoding using the FaceNet model.
+
+        preprocessed_face = self.preprocess_face(face)  # Preprocess the face
+
+        # Ensure the face input is in numpy array format
+        if not isinstance(preprocessed_face, np.ndarray):
+            preprocessed_face = np.array(preprocessed_face)
+
+        # Make sure the input is reshaped correctly for prediction (batch_size, height, width, channels)
+        #   preprocessed_face = preprocessed_face.reshape(1, 160, 160, 3)  # Match FaceNet input size
+
+        preprocessed_face = preprocessed_face.reshape(1, 50, 37, 1)
+
+        # Get encoding from the FaceNet model
+        encoding = self.model.predict(preprocessed_face)
+
+        return encoding[0]
+
+
     def eye_aspect_ratio(self, eye):
-        # Calculates the eye aspect ratio (EAR) using numpy.
-        A = np.linalg.norm(eye[1] - eye[5])  # vertical on eye 1
-        B = np.linalg.norm(eye[2] - eye[4])  # vertical on eye 2
-        C = np.linalg.norm(eye[0] - eye[3])  # distance between the eyes
-        ear = (A + B) / (2.0 * C)  # eye aspect ratio
-        return ear
+        # Computes the Eye Aspect Ratio (EAR) to detect blinks.
 
-    def capture_face(self, username):
-        # Captures face using the webcam for enrollment and stores the average face encoding from 3 captures.
+        A = np.linalg.norm(eye[1] - eye[5])  # Vertical distance
+        B = np.linalg.norm(eye[2] - eye[4])  # Vertical distance
+        C = np.linalg.norm(eye[0] - eye[3])  # Horizontal distance
+        return (A + B) / (2.0 * C)
+
+    def enroll_face(self, username):
+        # Enrolls a user by capturing face images and checking for liveliness using blink detection.
+
         cap = cv2.VideoCapture(0)
-        blink_count = 0
-        EAR_THRESHOLD = 0.25  # threshold to detect blinks
-        CONSEC_FRAMES = 3  # number of frames to ensure the eye is closed
+        face_encodings = []  # Store multiple face encodings (we will take 3)
+        count = 0
+        EAR_THRESHOLD = 0.25  # Threshold for blink detection
+        CONSEC_FRAMES = 2  # Number of consecutive frames to confirm blink
         counter = 0
+        blink_count = 0  # Counter for blinks
+        success = False  # Track if enrollment is successful
 
-        encodings = []  # To store the encodings for each capture
+        print("Press C to capture face after blink detection")
 
-        # Loop to capture 3 face images
-        for i in range(3):
-            cv2.namedWindow(f'Enroll - Capture {i + 1}/3 - Press c to capture')
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    print("Failed to capture image")
-                    cv2.destroyWindow(f'Enroll - Capture {i + 1}/3 - Press c to capture')
-                    cap.release()
-                    return False
+        while count < 3:  # Capture 3 faces
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to capture image")
+                break
 
-                # Turning image to grayscale for face detection
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                rects = self.detector(gray, 0)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            rects = self.detector(gray, 0)  # Detect faces
 
-                for rect in rects:
-                    shape = self.predictor(gray, rect)
-                    shape = np.array([[p.x, p.y] for p in shape.parts()])  # storing landmark coordinates
-                    left_eye = shape[36:42]  # left eye coordinates
-                    right_eye = shape[42:48]  # right eye coordinates
-                    # getting the eye aspect ratio of both eyes
-                    leftEAR = self.eye_aspect_ratio(left_eye)
-                    rightEAR = self.eye_aspect_ratio(right_eye)
-                    ear = (leftEAR + rightEAR) / 2.0
+            for rect in rects:
+                shape = self.predictor(gray, rect)  # Get facial landmarks
+                shape = np.array([[p.x, p.y] for p in shape.parts()])
 
-                    if ear < EAR_THRESHOLD:
-                        counter += 1
-                    else:
-                        if counter >= CONSEC_FRAMES:
-                            blink_count += 1
-                        counter = 0
+                left_eye = shape[36:42]  # Left eye landmarks
+                right_eye = shape[42:48]  # Right eye landmarks
 
-                    # combining the landmarks into a single array along the axis
-                    for (x, y) in np.concatenate((left_eye, right_eye), axis=0):
-                        cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)  # drawing a dot on each detected landmark
+                # Calculate EAR for both eyes
+                leftEAR = self.eye_aspect_ratio(left_eye)
+                rightEAR = self.eye_aspect_ratio(right_eye)
+                ear = (leftEAR + rightEAR) / 2.0  # Average EAR for both eyes
 
-                    cv2.rectangle(frame, (rect.left(), rect.top()), (rect.right(), rect.bottom()), (0, 255, 0), 2)  # drawing a rectangle around detected face
+                if ear < EAR_THRESHOLD:
+                    counter += 1
+                else:
+                    if counter >= CONSEC_FRAMES:
+                        blink_count += 1
+                        print(f"Blink detected: {blink_count}")
+                    counter = 0
 
-                cv2.imshow(f'Enroll - Capture {i + 1}/3 - Press c to capture', frame)
-                key = cv2.waitKey(1)
-                if key & 0xFF == ord('c') and blink_count > 0:
-                    break
-                if cv2.getWindowProperty(f'Enroll - Capture {i + 1}/3 - Press c to capture', cv2.WND_PROP_VISIBLE) < 1:
-                    break
+                # Draw rectangles around the face and eyes
+                cv2.rectangle(frame, (rect.left(), rect.top()), (rect.right(), rect.bottom()), (0, 255, 0), 2)
+                for (x, y) in np.concatenate([left_eye, right_eye], axis=0):
+                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-            cv2.destroyWindow(f'Enroll - Capture {i + 1}/3 - Press c to capture')
+            cv2.imshow('Enroll Face - Press "C" after blink detection', frame)
 
-            # After capturing the image, extract the face encoding
-            face_scores = face_recognition.face_encodings(frame)
-            if face_scores:
-                encodings.append(face_scores[0])  # Append the face encoding to the list
-                print(f"Face capture {i + 1}/3 successful.")
-            else:
-                print(f"No face detected for capture {i + 1}. Please try again.")
-                cap.release()
-                cv2.destroyAllWindows()
-                return False
+            # Capture the face after a blink is detected and 'C' is pressed
+            if cv2.waitKey(1) & 0xFF == ord('c') and blink_count > 0:
+                print(f"Capturing face {count + 1}...")
+                if len(rects) > 0:
+                    rect = rects[0]  # Take the first detected face
+                    face = frame[rect.top():rect.bottom(), rect.left():rect.right()]  # Crop the face
+                    face_encoding = self.generate_face_encoding(face)  # Generate the encoding
+                    face_encodings.append(face_encoding)  # Store the encoding
+                    count += 1  # Increment the face count
+
+                    # Reset blink count after capture
+                    blink_count = 0
+
+                if count == 3:
+                    success = True  # Enrollment was successful after capturing 3 faces
 
         cap.release()
         cv2.destroyAllWindows()
 
-        if len(encodings) == 3:
-            # Average the three encodings
-            avg_encoding = np.mean(encodings, axis=0)
-
-            # Save the average encoding to a file
-            np.save(os.path.join(self.storage_path, f'{username}.npy'), avg_encoding)
-            print(f"Average face encoding for {username} stored successfully.")
-            return True
+        # After loop ends, check if face encodings were captured and stored
+        if success and face_encodings:
+            # Average the encodings of the 3 captured faces
+            avg_encoding = np.mean(face_encodings, axis=0)
+            np.save(os.path.join(self.storage_path, f'{username}.npy'), avg_encoding)  # Save the average encoding
+            print(f"Face encoding for {username} stored successfully.")
+            return True  # Return True for successful enrollment
         else:
-            print("Failed to capture 3 valid face encodings. Please try again.")
-            return False
+            print("No face detected or blink failed. Please try again.")
+            return False  # Return False for failed enrollment
 
-# references:
-# 1. Soukupová, T., & Cech, J. (2016). Real-Time Eye Blink Detection using Facial Landmarks.
-# 2. Pathak, A. (2018). GitHub Repository on Eye Blink Detection using EAR. https://github.com/pathak-ashutosh/Eye-blink-detection
