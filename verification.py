@@ -6,8 +6,8 @@ from keras.models import load_model
 from scipy.spatial.distance import euclidean
 
 class Verification:
-    def __init__(self, model_path="C:\\Users\Huvanyani\\OneDrive - University of Johannesburg\\School\\2024\\Password Manager\\cnn_model.h5", storage_path='face_data',
-                 shape_predictor_path='face_data/shape_predictor_68_face_landmarks.dat'):
+    def __init__(self, model_path="cnn_model.h5", storage_path="face_data",
+                 shape_predictor_path="face_data/shape_predictor_68_face_landmarks.dat"):
         self.model = load_model(model_path)  # Load the trained CNN model
         self.storage_path = storage_path  # Directory where face encodings are stored
         self.detector = dlib.get_frontal_face_detector()  # Dlib face detector
