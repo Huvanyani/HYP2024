@@ -1,101 +1,82 @@
+import os
 import cv2
 import numpy as np
-import tensorflow as tf
-from tensorflow.python.keras.models import Sequential
-from tensorflow.python.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.datasets import fetch_lfw_people
-from FaceDetector import FaceDetector
-from scipy.spatial.distance import euclidean  # For face verification
+from keras.models import load_model
+import dlib
 
-class FaceRecognitionCNN:
-    def __init__(self, img_size=(50, 37)):
+
+class FaceRecognition:
+    def __init__(self, img_size=(50, 37), model_path="cnn_model.h5", storage_path="face_data",
+                 shape_predictor_path="face_data/shape_predictor_68_face_landmarks.dat"):
         # Image size matches the size used in LFW dataset
-        self.img_size = img_size
-        self.cnn_model = None
+        self.model = load_model(model_path)
+        self.storage_path = storage_path  # Directory where face encodings will be saved
 
-    def load_lfw_data(self):
+        self.detector = dlib.get_frontal_face_detector()  # Dlib face detector
+        self.predictor = dlib.shape_predictor(shape_predictor_path)
+
+        if not os.path.exists(self.storage_path):
+            os.makedirs(self.storage_path)  # Create the storage directory if it doesn't exist
+
+        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+    @staticmethod
+    def preprocess_face(face):
+        # Resizes and normalizes the face image for the FaceNet model input.
+
+        img_size = (50, 37)  # LFW image sizes
+        #   img_size = (160, 160)  # Update image size to match FaceNet input (160x160)
+
         """
-        Loads Labeled Faces in the Wild (LFW) dataset for face recognition training.
+        # If the face is in grayscale, convert it to RGB (FaceNet expects 3 channels)
+        if len(face.shape) == 2 or (
+                len(face.shape) == 3 and face.shape[2] == 1):  # If the image has 1 channel (grayscale)
+            face = cv2.cvtColor(face, cv2.COLOR_GRAY2RGB)  # Convert to RGB
         """
-        lfw_people = fetch_lfw_people(min_faces_per_person=2, resize=0.4)
-        images = lfw_people.images
-        labels = lfw_people.target
-        label_names = lfw_people.target_names
 
-        # Normalize the images
-        images = images.reshape(-1, self.img_size[0], self.img_size[1], 1) / 255.0
+        if len(face.shape) == 3 and face.shape[2] == 3:  # If the image has 3 channels (RGB)
+            face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
 
-        return images, labels, label_names
+        print(f"Original face size: {face.shape}")
 
-    def build_cnn_model(self, input_shape, num_classes):
-        """
-        Builds a simple CNN model for face encoding and classification.
-        """
-        model = Sequential()
+        # Resize the face to the required dimensions (160x160)
+        face = cv2.resize(face, img_size)
 
-        # Convolutional layers with pooling
-        model.add(Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
-        model.add(MaxPooling2D((2, 2)))
+        # Reshape for the model input, ensuring the size matches (160x160x3)
+        #   face = face.reshape(1, img_size[0], img_size[1], 3)  # Reshape for FaceNet (batch_size, height, width, channels)
 
-        model.add(Conv2D(64, (3, 3), activation='relu'))
-        model.add(MaxPooling2D((2, 2)))
+        face = face.reshape(img_size[0], img_size[1])
+        print(f"Resized face size: {face.shape}")
 
-        model.add(Conv2D(128, (3, 3), activation='relu'))
-        model.add(MaxPooling2D((2, 2)))
+        # Normalize the pixel values to [0, 1] range
+        face = face / 255.0
 
-        # Flatten and fully connected layers
-        model.add(Flatten())
-        model.add(Dense(128, activation='relu'))  # This layer produces the "face encoding"
-        model.add(Dense(num_classes, activation='softmax'))  # Classification layer for output
+        return face
 
-        # Compile the model
-        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    def generate_face_encoding(self, face):
+        # Generates a face encoding using the FaceNet model.
 
-        self.cnn_model = model
-        return model
+        preprocessed_face = self.preprocess_face(face)  # Preprocess the face
 
-    def train_model(self, model, images, labels, epochs=10):
-        """
-        Trains the CNN model on the provided face images and labels.
-        """
-        # Split data into training and validation sets
-        X_train, X_val, y_train, y_val = train_test_split(images, labels, test_size=0.2, random_state=42)
+        # Ensure the face input is in numpy array format
+        if not isinstance(preprocessed_face, np.ndarray):
+            preprocessed_face = np.array(preprocessed_face)
 
-        # Train the model
-        model.fit(X_train, y_train, epochs=epochs, validation_data=(X_val, y_val))
+        # Make sure the input is reshaped correctly for prediction (batch_size, height, width, channels)
+        #   preprocessed_face = preprocessed_face.reshape(1, 160, 160, 3)  # Match FaceNet input size
 
-        return model
+        preprocessed_face = preprocessed_face.reshape(1, 50, 37, 1)
 
-    def generate_encoding(self, face_image):
-        """
-        Generates a face encoding for a single face using the trained CNN.
-        The face_image should be pre-processed and normalized.
-        """
-        if self.cnn_model is None:
-            raise ValueError("The CNN model has not been trained or loaded.")
+        # Get encoding from the FaceNet model
+        encoding = self.model.predict(preprocessed_face)
 
-        # Pass the face through the model to get the encoding (128-dimensional vector)
-        face_image = face_image.reshape(1, self.img_size[0], self.img_size[1], 1)  # Reshape to match input shape
-        face_encoding = self.cnn_model.predict(face_image)
-        return face_encoding[0]
+        return encoding[0]
 
-    def verify_face(self, known_encodings, new_face_image, threshold=0.6):
-        """
-        Verifies if the new face matches any known encodings based on a threshold.
-        Uses Euclidean distance to compare encodings.
-        """
-        new_encoding = self.generate_encoding(new_face_image)
+    @staticmethod
+    def eye_aspect_ratio(eye):
+        # Computes the Eye Aspect Ratio (EAR) to detect blinks.
 
-        # Calculate distances between the new encoding and known encodings
-        for label, known_encoding in known_encodings.items():
-            distance = euclidean(known_encoding, new_encoding)
-            print(f"Distance to {label}: {distance}")
-
-            if distance < threshold:
-                print(f"Face matched with {label} (distance: {distance})")
-                return label
-
-        print("No matching face found.")
-        return None
+        A = np.linalg.norm(eye[1] - eye[5])  # Vertical distance
+        B = np.linalg.norm(eye[2] - eye[4])  # Vertical distance
+        C = np.linalg.norm(eye[0] - eye[3])  # Horizontal distance
+        return (A + B) / (2.0 * C)

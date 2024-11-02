@@ -23,9 +23,11 @@ class Enroll:
         # Resizes and normalizes the face image for the FaceNet model input.
 
         img_size = (50, 37)     # LFW image sizes
-        #   img_size = (160, 160)  # Update image size to match FaceNet input (160x160)
 
         """
+        # FaceNet
+        img_size = (160, 160)  # for FaceNet input (160x160)
+
         # If the face is in grayscale, convert it to RGB (FaceNet expects 3 channels)
         if len(face.shape) == 2 or (
                 len(face.shape) == 3 and face.shape[2] == 1):  # If the image has 1 channel (grayscale)
@@ -35,18 +37,18 @@ class Enroll:
         if len(face.shape) == 3 and face.shape[2] == 3:  # If the image has 3 channels (RGB)
             face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
 
-        print(f"Original face size: {face.shape}")
+        # print(f"Original face size: {face.shape}")
 
-        # Resize the face to the required dimensions (160x160)
+        # Resize the face to the required dimensions
         face = cv2.resize(face, img_size)
 
-        # Reshape for the model input, ensuring the size matches (160x160x3)
-        #   face = face.reshape(1, img_size[0], img_size[1], 3)  # Reshape for FaceNet (batch_size, height, width, channels)
+        # Reshaping for the model input
+        #   face = face.reshape(1, img_size[0], img_size[1], 3)  # Reshaping for FaceNet (batch_size, height, width, channels)
 
         face = face.reshape(img_size[0], img_size[1])
-        print(f"Resized face size: {face.shape}")
+        # print(f"Resized face size: {face.shape}")
 
-        # Normalize the pixel values to [0, 1] range
+        # Normalizing the pixel values to [0, 1] range
         face = face / 255.0
 
         return face
@@ -60,12 +62,11 @@ class Enroll:
         if not isinstance(preprocessed_face, np.ndarray):
             preprocessed_face = np.array(preprocessed_face)
 
-        # Make sure the input is reshaped correctly for prediction (batch_size, height, width, channels)
+        # Making sure the input is reshaped correctly for prediction
         #   preprocessed_face = preprocessed_face.reshape(1, 160, 160, 3)  # Match FaceNet input size
-
         preprocessed_face = preprocessed_face.reshape(1, 50, 37, 1)
 
-        # Get encoding from the FaceNet model
+        # Getting encoding from model
         encoding = self.model.predict(preprocessed_face)
 
         return encoding[0]
@@ -83,7 +84,7 @@ class Enroll:
         # Enrolls a user by capturing face images and checking for liveliness using blink detection.
 
         cap = cv2.VideoCapture(0)
-        face_encodings = []  # Store multiple face encodings (we will take 3)
+        face_encodings = []  # Store multiple face encodings
         count = 0
         EAR_THRESHOLD = 0.25  # Threshold for blink detection
         CONSEC_FRAMES = 2  # Number of consecutive frames to confirm blink
@@ -91,7 +92,7 @@ class Enroll:
         blink_count = 0  # Counter for blinks
         success = False  # Track if enrollment is successful
 
-        print("Press C to capture face after blink detection")
+        print("Press C to capture face")
 
         while count < 3:  # Capture 3 faces
             ret, frame = cap.read()
@@ -100,10 +101,10 @@ class Enroll:
                 break
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            rects = self.detector(gray, 0)  # Detect faces
+            rects = self.detector(gray, 0)  # Detecting faces
 
             for rect in rects:
-                shape = self.predictor(gray, rect)  # Get facial landmarks
+                shape = self.predictor(gray, rect)  # Getting facial landmarks
                 shape = np.array([[p.x, p.y] for p in shape.parts()])
 
                 left_eye = shape[36:42]  # Left eye landmarks
@@ -119,24 +120,24 @@ class Enroll:
                 else:
                     if counter >= CONSEC_FRAMES:
                         blink_count += 1
-                        print(f"Blink detected: {blink_count}")
+                      #  print(f"Blink detected: {blink_count}")
                     counter = 0
 
-                # Draw rectangles around the face and eyes
+                # Drawing rectangles around the face and eyes
                 cv2.rectangle(frame, (rect.left(), rect.top()), (rect.right(), rect.bottom()), (0, 255, 0), 2)
                 for (x, y) in np.concatenate([left_eye, right_eye], axis=0):
                     cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-            cv2.imshow('Enroll Face - Press "C" after blink detection', frame)
+            cv2.imshow('Enroll Face - Press "C" to capture', frame)
 
             # Capture the face after a blink is detected and 'C' is pressed
             if cv2.waitKey(1) & 0xFF == ord('c') and blink_count > 0:
                 print(f"Capturing face {count + 1}...")
                 if len(rects) > 0:
-                    rect = rects[0]  # Take the first detected face
-                    face = frame[rect.top():rect.bottom(), rect.left():rect.right()]  # Crop the face
-                    face_encoding = self.generate_face_encoding(face)  # Generate the encoding
-                    face_encodings.append(face_encoding)  # Store the encoding
+                    rect = rects[0]  # Taking the first detected face
+                    face = frame[rect.top():rect.bottom(), rect.left():rect.right()]  # Cropping the face
+                    face_encoding = self.generate_face_encoding(face)  # Generating the encoding
+                    face_encodings.append(face_encoding)  # Storing the encoding
                     count += 1  # Increment the face count
 
                     # Reset blink count after capture
@@ -148,7 +149,7 @@ class Enroll:
         cap.release()
         cv2.destroyAllWindows()
 
-        # After loop ends, check if face encodings were captured and stored
+        # checking if face encodings were captured and stored
         if success and face_encodings:
             # Average the encodings of the 3 captured faces
             avg_encoding = np.mean(face_encodings, axis=0)

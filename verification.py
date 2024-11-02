@@ -13,6 +13,8 @@ class Verification:
         self.detector = dlib.get_frontal_face_detector()  # Dlib face detector
         self.predictor = dlib.shape_predictor(shape_predictor_path)  # Dlib shape predictor for facial landmarks
 
+        # "C:\\Users\\Huvanyani\\OneDrive - University of Johannesburg\\School\\2024\\Password Manager\\facenet_model.h5"
+
     def preprocess_face(self, face):
         # Resizes and normalizes the face image for the FaceNet model input.
 
@@ -29,7 +31,7 @@ class Verification:
         if len(face.shape) == 3 and face.shape[2] == 3:  # If the image has 3 channels (RGB)
             face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
 
-        # Resize the face to the required dimensions (160x160)
+        # Resizing the face
         face = cv2.resize(face, img_size)
         face = face.reshape(img_size[0], img_size[1])  # Original Model
 
@@ -50,7 +52,6 @@ class Verification:
         if not isinstance(preprocessed_face, np.ndarray):
             preprocessed_face = np.array(preprocessed_face)
 
-        # Make sure the input is reshaped correctly for prediction (batch_size, height, width, channels)
         # preprocessed_face = preprocessed_face.reshape(1, 160, 160, 3)  # Match FaceNet input size
 
         preprocessed_face = preprocessed_face.reshape(1, 50, 37, 1)     # Original Model
